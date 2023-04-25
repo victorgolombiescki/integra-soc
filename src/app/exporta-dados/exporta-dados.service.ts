@@ -14,16 +14,24 @@ export class ExportaDadosService {
     const empresas = await this.extrairDadosSocService.extrairDados(
       exportaDadosDto,
     );
+
+    const unidade = await this.extrairDadosSocService.extrairDadosUnidade(
+      exportaDadosDto,
+    );
+
     const EmpresasBuscarMatricula =
       await this.extrairDadosSocService.extrairDadosFuncionario(
         empresas,
+        unidade,
         exportaDadosDto,
       );
 
-    const funcioarioMatriculaEsocial =
+    return EmpresasBuscarMatricula;
+
+    /*const funcioarioMatriculaEsocial =
       await this.extrairDadosEsocialService.extrairDadosPortalEsocial(EmpresasBuscarMatricula);
 
-    /*const atualizarSoc = await this.extrairDadosSocService.buscarDadosEsocial(
+    const atualizarSoc = await this.extrairDadosSocService.buscarDadosEsocial(
       funcionarios,
       exportaDadosDto,
     );*/

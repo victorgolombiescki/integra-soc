@@ -20,10 +20,54 @@ export class ExtrairDadosSocService {
     return teste;
   }
 
-  async extrairDadosFuncionario(retorno, exportaDadosDto) {
+  async extrairDadosUnidade(exportaDadosDto) {
     const url = process.env.EXPORTADADOSSOC;
     const client = await soap.createClientAsync(url);
-    const funcionarioSemMatricula = [];
+    const args = await this.montarDtoMapper.montaExportaDadosUnidade(
+      exportaDadosDto.unidade,
+    );
+    const data = await client.exportaDadosWsAsync(args);
+    const dataParse = JSON.parse(data[0].return.retorno);
+    const retorno = dataParse.filter(
+      (p) => p.UNIDADEATIVA == '1' && p.CNPJ != '',
+    );
+
+    const responstaFormatado = retorno.map((unidade) => {
+      return {
+        CODIGOEMPRESA: unidade.CODIGOEMPRESA,
+        CODIGOUNIDADE: unidade.CODIGOUNIDADE,
+        NOMEUNIDADE: unidade.NOMEUNIDADE,
+        CNPJUNIDADE: unidade.CNPJUNIDADE,
+      };
+    });
+
+    return responstaFormatado;
+  }
+
+  async extrairDadosFuncionario(retorno, unidade, exportaDadosDto) {
+    const url = process.env.EXPORTADADOSSOC;
+    const client = await soap.createClientAsync(url);
+    const dtoEmpresaUnidade = [];
+    const dtoFuncionarioSemMatricula = [];
+    const dtoRetornoGeral = [];
+
+    retorno.map((empresa) => {
+      const retornoAgrupado = unidade.filter(
+        (unidade) => unidade.CODIGOEMPRESA == empresa.CODIGO,
+      );
+
+      const dto = {
+        empresa: {
+          CODIGO: empresa.CODIGO,
+          CNPJEMPRESA: empresa.CNPJ,
+          NOMEEMPRESA: empresa.NOMEABREVIADO,
+          UNIDADES: retornoAgrupado,
+        },
+      };
+
+      dtoEmpresaUnidade.push(dto);
+    });
+
     for await (const empresa of retorno) {
       const args = await this.montarDtoMapper.montaExportaDadosFuncionario(
         exportaDadosDto.funcionario,
@@ -36,16 +80,32 @@ export class ExtrairDadosSocService {
       );
 
       if (semMatricula.length) {
-        const pusMatricula = {
-          CNPJ: empresa.CNPJ,
-          EMPRESA: empresa.NOMEABREVIADO,
-          FUNCIONARIO: semMatricula,
-        };
-
-        funcionarioSemMatricula.push(pusMatricula);
+        dtoFuncionarioSemMatricula.push(...semMatricula);
       }
     }
-    return funcionarioSemMatricula;
+
+    dtoEmpresaUnidade.map((p) => {
+      p.empresa.UNIDADES.map((unidade) => {
+        const buscaFuncionarioUnidade = dtoFuncionarioSemMatricula.filter(
+          (funcionario) =>
+            funcionario.CODIGOEMPRESA == unidade.CODIGOEMPRESA &&
+            funcionario.CODIGOUNIDADE == unidade.CODIGOUNIDADE,
+        );
+        if (buscaFuncionarioUnidade.length) {
+          const dtoGeral = {
+            empresa: {
+              CODIGO: p.empresa.CODIGO,
+              CNPJEMPRESA: p.empresa.CNPJEMPRESA,
+              NOMEEMPRESA: p.empresa.NOMEEMPRESA,
+              UNIDADES: { ...unidade, FUNCIONARIOS: buscaFuncionarioUnidade },
+            },
+          };
+          dtoRetornoGeral.push(dtoGeral);
+        }
+      });
+    });
+
+    return dtoRetornoGeral;
   }
 
   async buscarDadosEsocial(funcionarioSemMatricula, exportaDadosDto) {

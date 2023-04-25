@@ -21,6 +21,24 @@ export class MontarDtoMapper {
     };
   }
 
+  async montaExportaDadosUnidade(exportaDadosDto) {
+    const dtoExportadados = {
+      empresa: exportaDadosDto.empresa,
+      codigo: exportaDadosDto.codigo,
+      chave: exportaDadosDto.chave,
+      tipoSaida: exportaDadosDto.tipoSaida,
+    };
+    return {
+      arg0: {
+        erro: {},
+        mensagemErro: {},
+        parametros: JSON.stringify(dtoExportadados),
+        retorno: {},
+        tipoArquivoRetorno: 'json',
+      },
+    };
+  }
+
   async montaExportaDadosFuncionario(exportaDadosDto, empresa) {
     const dtoExportadados = {
       empresa: empresa.CODIGO,
